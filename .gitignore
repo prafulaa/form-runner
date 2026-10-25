@@ -1,0 +1,6 @@
+*.log
+*.html.tmp
+failed.html
+progress.json
+node_modules/
+local/

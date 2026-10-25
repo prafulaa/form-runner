@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Form Runner</title>
+<style>
+  :root {
+    --bg: #101214;
+    --surface: #16191d;
+    --surface-2: #1d2126;
+    --border: #262b31;
+    --border-strong: #3d444d;
+    --text: #e6e9ed;
+    --text-dim: #9199a1;
+    --text-faint: #6a737d;
+    --accent: #2f81f7;
+    --accent-strong: #4493f8;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --bad: #f85149;
+    --radius: 6px;
+    --radius-lg: 10px;
+    --mono: ui-monospace, Consolas, "Cascadia Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, "Segoe UI", sans-serif;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 20px; height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .mark {
+    width: 22px; height: 22px; border-radius: var(--radius);
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; flex: none;
+  }
+  .brand { font-weight: 650; letter-spacing: -0.01em; }
+  .topbar .spacer { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 12px 3px 9px; background: var(--surface-2);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
+  .dot.running { background: var(--ok); animation: pulse 1.4s ease-in-out infinite; }
+  .dot.done { background: var(--accent); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* ---------- layout ---------- */
+  .layout {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    gap: 16px; padding: 20px; max-width: 1280px; margin: 0 auto;
+  }
+  @media (min-width: 1024px) {
+    .layout { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; }
+    .side { position: sticky; top: 72px; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 16px;
+  }
+  .card-h {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .step-n {
+    font: 600 12px var(--mono); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: var(--radius); padding: 1px 7px;
+  }
+  .card-h h2 { font-size: 14px; font-weight: 600; margin: 0; }
+  .card-h .hint { margin-left: auto; font-size: 12px; color: var(--text-faint); }
+  .card-b { padding: 16px 18px; }
+
+  /* ---------- forms ---------- */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > span { font-size: 12px; color: var(--text-dim); }
+  input[type=text], input[type=number], select, textarea {
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius);
+    padding: 8px 10px; font: inherit; outline: none; min-width: 0;
+    transition: border-color 120ms;
+  }
+  input[type=text]:hover, select:hover, input[type=number]:hover { border-color: var(--border-strong); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    outline-offset: 0;
+  }
+  button {
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text); font: inherit; font-weight: 500;
+    border-radius: var(--radius); padding: 8px 14px; cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+    display: inline-flex; align-items: center; gap: 7px; justify-content: center;
+  }
+  button:hover:not(:disabled) { border-color: var(--border-strong); background: #22272e; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-strong); border-color: transparent; }
+  button.danger { background: var(--bad); border-color: transparent; color: #fff; font-weight: 600; }
+  button.danger:hover:not(:disabled) { background: #ff6a61; border-color: transparent; }
+
+  .url-row { display: flex; gap: 8px; }
+  .url-row input { flex: 1; }
+
+  /* ---------- questions ---------- */
+  .q { border-top: 1px solid var(--border); padding: 14px 0; }
+  .q:first-of-type { border-top: 0; padding-top: 4px; }
+  .q-head { display: flex; gap: 10px; align-items: baseline; }
+  .q-num { color: var(--text-faint); font: 500 12px var(--mono); min-width: 24px; }
+  .q-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .tag {
+    font-size: 11px; padding: 1px 8px; border-radius: 999px; flex: none;
+    border: 1px solid var(--border); color: var(--text-dim); background: var(--surface-2);
+  }
+  .tag.req { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .q-ctl { margin: 8px 0 0 34px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .q-ctl select { max-width: 480px; }
+  .q-ctl input[type=text] { flex: 1; min-width: 240px; }
+  .check { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--text-dim); cursor: pointer; }
+  .check input { accent-color: var(--accent); margin: 0; }
+  .choice-list { margin: 8px 0 0 34px; display: flex; gap: 4px 16px; flex-wrap: wrap; }
+  .choice-list .check { color: var(--text); font-size: 12.5px; }
+
+  /* ---------- empty / warning ---------- */
+  .empty {
+    text-align: center; padding: 34px 16px; color: var(--text-faint); font-size: 13px;
+  }
+  .empty svg { display: block; margin: 0 auto 10px; opacity: 0.6; }
+  .note {
+    display: flex; gap: 8px; align-items: flex-start;
+    font-size: 12.5px; color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+    border-radius: var(--radius); padding: 8px 12px; margin-top: 12px;
+  }
+  .err {
+    display: flex; gap: 8px; align-items: flex-start;
+    font-size: 12.5px; color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent);
+    border-radius: var(--radius); padding: 8px 12px; margin-top: 12px;
+  }
+
+  /* ---------- run config ---------- */
+  .run-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .run-grid .wide { grid-column: 1 / -1; }
+  .est {
+    margin-top: 12px; font: 12px var(--mono); color: var(--text-dim);
+    border-top: 1px solid var(--border); padding-top: 10px;
+  }
+  .est b { color: var(--text); font-weight: 600; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .actions .primary { flex: 1; }
+
+  /* ---------- progress ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; }
+  .stat b { display: block; font: 600 17px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11px; color: var(--text-dim); }
+  .stat.ok b { color: var(--ok); }
+  .stat.bad b { color: var(--bad); }
+  .bar-wrap { display: flex; align-items: center; gap: 10px; margin: 12px 0 10px; }
+  .bar { flex: 1; height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .bar > div {
+    height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--ok));
+    transition: width 400ms ease;
+  }
+  .pct { font: 500 12px var(--mono); color: var(--text-dim); min-width: 38px; text-align: right; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    font: 11px var(--mono); color: var(--text-dim);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 3px 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip b { color: var(--text); font-weight: 500; }
+  .log {
+    background: #0b0d10; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 12px; height: 230px; overflow-y: auto;
+    font: 11.5px/1.7 var(--mono); color: var(--text-dim);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .log .t { color: var(--text-faint); margin-right: 8px; }
+  .log .ok { color: var(--ok); }
+  .log .bad { color: var(--bad); }
+  .log::-webkit-scrollbar { width: 8px; }
+  .log::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+  footer {
+    max-width: 1280px; margin: 0 auto; padding: 4px 20px 40px;
+    color: var(--text-faint); font-size: 12px;
+  }
+  footer a { color: var(--text-dim); }
+
+  /* ---------- toast ---------- */
+  #toasts { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+  .toast {
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius); padding: 10px 14px; font-size: 13px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    animation: slide-in 180ms ease; max-width: 340px;
+  }
+  .toast.bad { border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+  @keyframes slide-in { from { transform: translateY(8px); opacity: 0; } }
+
+  @media (max-width: 480px) {
+    .run-grid, .stats { grid-template-columns: 1fr 1fr; }
+    .q-ctl, .choice-list { margin-left: 0; }
+    .layout { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="mark" aria-hidden="true">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.75A2.75 2.75 0 0 1 4.75 0h6.5A2.75 2.75 0 0 1 14 2.75v10.5A2.75 2.75 0 0 1 11.25 16h-6.5A2.75 2.75 0 0 1 2 13.25Zm8.5 4.5v-2H7.75A.75.75 0 0 0 7 6v6.19l-1.22-1.22a.75.75 0 1 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06L8.5 12.19V7.25Z"/></svg>
+  </span>
+  <span class="brand">Form Runner</span>
+  <span class="spacer"></span>
+  <span class="pill"><span class="dot" id="statusDot"></span><span id="statusText">idle</span></span>
+</header>
+
+<main class="layout">
+  <div>
+    <!-- step 1 -->
+    <section class="card">
+      <div class="card-h"><span class="step-n">1</span><h2>Form</h2><span class="hint">any public Google Forms link</span></div>
+      <div class="card-b">
+        <div class="url-row">
+          <input id="url" type="text" placeholder="https://docs.google.com/forms/d/e/…/viewform" spellcheck="false" autocomplete="off" style="flex:1" aria-label="Google Forms URL">
+          <button id="loadBtn" class="primary">Load form</button>
+        </div>
+        <div id="loadErr" class="err" role="alert" hidden></div>
+      </div>
+    </section>
+
+    <!-- step 2 -->
+    <section class="card">
+      <div class="card-h"><span class="step-n">2</span><h2>Questions</h2><span class="hint" id="qCount"></span></div>
+      <div class="card-b">
+        <div id="qEmpty" class="empty">
+          <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.75C3 .784 3.784 0 4.75 0h6.5C12.216 0 13 .784 13 1.75v12.5A1.75 1.75 0 0 1 11.25 16h-6.5A1.75 1.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h6.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25ZM6.5 4.75A.75.75 0 0 1 7.25 4h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75M6.5 8A.75.75 0 0 1 7.25 7.25h3.5a.75.75 0 0 1 0 1.5h-3.5A.75.75 0 0 1 6.5 8m0 3.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75M5 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m0 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0"/></svg>
+          Load a form to see its questions
+        </div>
+        <div id="questions"></div>
+        <div id="skipWarn" class="note" hidden>⚠ <span id="skipText"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="side">
+    <!-- step 3 -->
+    <section class="card">
+      <div class="card-h"><span class="step-n">3</span><h2>Run</h2><span class="hint">parallel submitters</span></div>
+      <div class="card-b">
+        <div class="run-grid">
+          <div class="field">
+            <span id="lCount">Responses wanted</span>
+            <input id="count" type="number" value="10" min="1" max="1000" aria-labelledby="lCount">
+          </div>
+          <div class="field">
+            <span id="lWorkers">Workers</span>
+            <input id="workers" type="number" value="3" min="1" max="16" aria-labelledby="lWorkers">
+          </div>
+          <div class="field wide">
+            <span id="lSpeed">Speed</span>
+            <select id="speed" aria-labelledby="lSpeed">
+              <option value="slow">Slow — human-like</option>
+              <option value="normal" selected>Normal</option>
+              <option value="fast">Fast</option>
+              <option value="max">Max — no delay</option>
+            </select>
+          </div>
+        </div>
+        <div class="est" id="estimate"></div>
+        <div class="actions">
+          <button id="startBtn" class="primary" disabled>Start</button>
+          <button id="stopBtn" class="danger" hidden>Stop</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- progress -->
+    <section class="card" id="progCard" hidden>
+      <div class="card-h"><span class="step-n">▸</span><h2>Progress</h2><span class="hint" id="formName"></span></div>
+      <div class="card-b">
+        <div class="stats" role="status" aria-live="polite">
+          <div class="stat ok"><b id="stDone">0</b><span>recorded</span></div>
+          <div class="stat bad"><b id="stFail">0</b><span>failed</span></div>
+          <div class="stat"><b id="stTotal">0</b><span>requested</span></div>
+          <div class="stat"><b id="stEta">–</b><span>eta</span></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar"><div id="barFill"></div></div>
+          <span class="pct" id="pct">0%</span>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="log" id="log"></div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  Local tool — runs on this machine only. Only use on forms you own or have permission to test;
+  Google may throttle or log automated submissions.
+</footer>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+const SPEED_LABEL = {
+  slow:   { delay: [4, 9],     note: "4–9s between submissions per worker" },
+  normal: { delay: [1.5, 4],   note: "1.5–4s between submissions per worker" },
+  fast:   { delay: [0.4, 1.2], note: "0.4–1.2s between submissions per worker" },
+  max:    { delay: [0, 0.15],  note: "no pacing delay" },
+};
+const SUBMIT_COST = 1.2; // seconds per submission (fetch token + post)
+
+let questions = [];
+let polling = null;
+let logFollow = true;
+let renderedLogCount = 0;
+
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function toast(msg, isBad) {
+  const t = document.createElement("div");
+  t.className = "toast" + (isBad ? " bad" : "");
+  t.textContent = msg;
+  $("toasts").appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", body: JSON.stringify(body) } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+  return data;
+}
+
+/* ---------- step 1: load ---------- */
+
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loadBtn").click(); });
+try { $("url").value = localStorage.getItem("fr:url") || ""; } catch {}
+
+$("loadBtn").onclick = async () => {
+  const btn = $("loadBtn");
+  $("loadErr").hidden = true;
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  try {
+    const url = $("url").value.trim();
+    const form = await api("/api/parse", { url });
+    try { localStorage.setItem("fr:url", url); } catch {}
+    questions = form.questions;
+    renderQuestions();
+    const required = questions.filter((q) => q.required).length;
+    $("qCount").textContent = `${questions.length} questions · ${required} required`;
+    if (form.skipped > 0) {
+      $("skipText").textContent = `${form.skipped} unsupported question(s) — grid / time / file-upload types are skipped.`;
+      $("skipWarn").hidden = false;
+    } else $("skipWarn").hidden = true;
+    $("startBtn").disabled = false;
+    toast(`Loaded "${form.title}" — ${questions.length} questions`);
+  } catch (e) {
+    $("loadErr").textContent = e.message;
+    $("loadErr").hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Load form";
+  }
+};
+
+/* ---------- step 2: questions ---------- */
+
+const KIND_LABEL = { radio: "choice", dropdown: "dropdown", checkbox: "multi", scale: "scale", text: "text", date: "date" };
+
+function renderQuestions() {
+  const box = $("questions");
+  box.innerHTML = "";
+  $("qEmpty").hidden = questions.length > 0;
+  for (const q of questions) {
+    const div = document.createElement("div");
+    div.className = "q";
+    let ctl = "";
+    if (q.kind === "radio" || q.kind === "dropdown" || q.kind === "scale") {
+      ctl = `<select data-q="${q.idx}" aria-label="Answer for question ${q.idx}">
+        <option value="__random" selected>🎲 Random each response</option>` +
+        q.choices.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("") +
+        `</select>`;
+    } else if (q.kind === "checkbox") {
+      ctl = `<div data-q="${q.idx}">
+        <label class="check"><input type="checkbox" class="rnd" checked> Random subset each response</label>
+        <div class="choice-list">` +
+        q.choices.map((c) => `<label class="check"><input type="checkbox" class="choice" value="${esc(c)}"> ${esc(c)}</label>`).join("") +
+        `</div></div>`;
+    } else {
+      ctl = `<div data-q="${q.idx}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" class="val" style="flex:1;min-width:220px"
+               placeholder="${q.kind === "date" ? "YYYY-MM-DD" : "leave empty → generated answer"}" aria-label="Answer for question ${q.idx}">
+        <label class="check"><input type="checkbox" class="rnd" checked> Random</label>
+      </div>`;
+    }
+    div.innerHTML =
+      `<div class="q-head">
+         <span class="q-num">${q.idx}</span>
+         <span class="q-title">${esc(q.title)}</span>
+         <span class="tag">${KIND_LABEL[q.kind] || q.kind}</span>
+         ${q.required ? '<span class="tag req">required</span>' : ""}
+       </div>
+       <div class="q-ctl">${ctl}</div>`;
+    box.appendChild(div);
+  }
+}
+
+function buildAnswers() {
+  const answers = {};
+  for (const q of questions) {
+    const el = document.querySelector(`[data-q="${q.idx}"]`);
+    if (!el) continue;
+    if (q.kind === "radio" || q.kind === "dropdown" || q.kind === "scale") {
+      answers[q.idx] = el.value === "__random" ? { mode: "random" } : { mode: "fixed", value: el.value };
+    } else if (q.kind === "checkbox") {
+      const rnd = el.querySelector(".rnd").checked;
+      const vals = [...el.querySelectorAll(".choice:checked")].map((x) => x.value);
+      answers[q.idx] = rnd || vals.length === 0 ? { mode: "random" } : { mode: "fixed", value: vals };
+    } else {
+      const rnd = el.querySelector(".rnd").checked;
+      const v = el.querySelector(".val").value.trim();
+      answers[q.idx] = rnd || !v ? { mode: "random" } : { mode: "fixed", value: v };
+    }
+  }
+  return answers;
+}
+
+/* ---------- step 3: run config ---------- */
+
+function fmtDur(sec) {
+  if (sec < 60) return `${Math.max(1, Math.round(sec))}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${Math.round(sec % 60)}s`;
+  return `${(sec / 3600).toFixed(1)}h`;
+}
+
+function updateEstimate() {
+  const count = Math.max(1, Number($("count").value) || 1);
+  const workers = Math.max(1, Number($("workers").value) || 1);
+  const [lo, hi] = SPEED_LABEL[$("speed").value].delay;
+  const perWorker = (lo + hi) / 2 + SUBMIT_COST;
+  const rate = workers / perWorker; // responses per second
+  const perMin = rate * 60;
+  const total = count / rate;
+  $("estimate").innerHTML =
+    `${SPEED_LABEL[$("speed").value].note}<br>` +
+    `≈ <b>${perMin < 10 ? perMin.toFixed(1) : Math.round(perMin)}</b> responses/min · ` +
+    `est. <b>${fmtDur(total)}</b> for ${count} responses`;
+}
+["count", "workers", "speed"].forEach((id) => $(id).addEventListener("input", updateEstimate));
+updateEstimate();
+
+$("startBtn").onclick = async () => {
+  $("startBtn").disabled = true;
+  try {
+    await api("/api/run", {
+      url: $("url").value.trim(),
+      count: Number($("count").value),
+      workers: Number($("workers").value),
+      speed: $("speed").value,
+      answers: buildAnswers(),
+    });
+    $("stopBtn").hidden = false;
+    $("progCard").hidden = false;
+    $("log").textContent = "";
+    renderedLogCount = 0;
+    startPolling();
+    toast("Run started");
+  } catch (e) {
+    toast(e.message, true);
+    $("startBtn").disabled = false;
+  }
+};
+
+$("stopBtn").onclick = async () => {
+  await api("/api/stop", {}).catch(() => {});
+  toast("Stop requested");
+};
+
+/* ---------- progress ---------- */
+
+function setStatus(mode) {
+  const dot = $("statusDot");
+  dot.className = "dot" + (mode ? " " + mode : "");
+  $("statusText").textContent = mode === "running" ? "running" : mode === "done" ? "finished" : "idle";
+}
+
+function appendLog(container, line) {
+  const [time, ...rest] = line.split("  ");
+  const div = document.createElement("div");
+  const bad = /FAILED|ERROR|crash|stopped/.test(rest.join(" "));
+  const good = /recorded|finished|loaded/.test(rest.join(" ")) && !bad;
+  div.innerHTML = `<span class="t">${esc(time)}</span><span class="${bad ? "bad" : good ? "ok" : ""}">${esc(rest.join(" "))}</span>`;
+  container.appendChild(div);
+  while (container.children.length > 300) container.firstChild.remove();
+  if (logFollow) container.scrollTop = container.scrollHeight;
+}
+
+$("log").addEventListener("scroll", () => {
+  const el = $("log");
+  logFollow = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+});
+
+function startPolling() {
+  if (polling) return;
+  setStatus("running");
+  polling = setInterval(async () => {
+    let s;
+    try { s = await (await fetch("/api/progress")).json(); } catch { return; }
+    const finished = (s.done || 0) + (s.failed || 0);
+    $("stDone").textContent = s.done ?? 0;
+    $("stFail").textContent = s.failed ?? 0;
+    $("stTotal").textContent = s.total ?? 0;
+    const pct = s.total ? Math.round((finished / s.total) * 100) : 0;
+    $("barFill").style.width = pct + "%";
+    $("pct").textContent = pct + "%";
+    if (s.done > 0 && !s.running) {
+      $("stEta").textContent = "done";
+    } else if (s.done > 0) {
+      const rate = (Date.now() - s.startedAt) / s.done / 1000;
+      $("stEta").textContent = fmtDur((s.total - finished) * rate);
+    } else {
+      $("stEta").textContent = "–";
+    }
+    $("chips").innerHTML = (s.workers || [])
+      .map((w) => `<span class="chip">W${w.id} <b>✓${w.submitted}</b> ✗${w.failed} · ${esc(w.status)}</span>`)
+      .join("");
+    const log = $("log");
+    // server caps its log buffer; if it trimmed behind us, start over
+    if ((s.logs || []).length < renderedLogCount) {
+      log.textContent = "";
+      renderedLogCount = 0;
+    }
+    (s.logs || []).slice(renderedLogCount).forEach((l) => appendLog(log, l));
+    renderedLogCount = (s.logs || []).length;
+    if (!s.running && s.total) {
+      clearInterval(polling);
+      polling = null;
+      $("stopBtn").hidden = true;
+      $("startBtn").disabled = !questions.length;
+      setStatus(finished ? "done" : "");
+      toast(`Run finished — ${s.done} recorded, ${s.failed} failed`, s.failed > 0 && s.done === 0);
+    }
+  }, 600);
+}
+</script>
+</body>
+</html>
